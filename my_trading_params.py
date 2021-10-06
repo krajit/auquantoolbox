@@ -1,7 +1,10 @@
 from backtester.trading_system_parameters import TradingSystemParameters
 from backtester.features.feature import Feature
 from datetime import timedelta
-from backtester.dataSource.yahoo_data_source import YahooStockDataSource
+# from backtester.dataSource.yahoo_data_source import YahooStockDataSource
+# from backtester.dataSource.auquan_data_source import AuquanDataSource
+# from backtester.dataSource.csv_data_source import CsvDataSource
+from backtester.dataSource.local_data_source import LocalStockDataSource
 from backtester.executionSystem.simple_execution_system import SimpleExecutionSystem
 from backtester.orderPlacer.backtesting_order_placer import BacktestingOrderPlacer
 from backtester.trading_system import TradingSystem
@@ -9,9 +12,6 @@ from backtester.timeRule.us_time_rule import USTimeRule
 from backtester.version import updateCheck
 from backtester.constants import *
 import pandas as pd
-
-
-
 
 class MyTradingParams(TradingSystemParameters):
     '''
@@ -22,22 +22,42 @@ class MyTradingParams(TradingSystemParameters):
         super(MyTradingParams, self).__init__()
         self.count = 0 
         self.params = {}
-        self.start = '2017/01/01'
-        self.end = '2017/06/30'
-        self.instrumentIds = ['AAPL', 'GOOG']
+        self.start = '2016/01/01'
+        self.end = '2016/06/30'
+        self.instrumentIds = ['GOOGL', 'AAPL']
 
     '''
     Returns an instance of class DataParser. Source of data for instruments
     '''
 
     def getDataParser(self):
-
-        return YahooStockDataSource(cachedFolderName='yahooData/',
-                                    dataSetId='AuquanTrainingTest',
-                                    instrumentIds=self.instrumentIds,
-                                    startDateStr=self.start,
-                                    endDateStr=self.end,
-                                    event='history')
+        #YahooStockDataSource
+        return LocalStockDataSource(
+            pathToHistoricalData = 'historicalData/',
+            cachedFolderName='yahooData/',
+            dataSetId='AuquanTrainingTest',
+            instrumentIds=self.instrumentIds,
+            startDateStr=self.start,
+            endDateStr=self.end,
+            event='history',
+            liveUpdates=True, 
+            pad=False
+            )
+        # return YahooStockDataSource(cachedFolderName='yahooData/',
+        #                         dataSetId='AuquanTrainingTest',
+        #                         instrumentIds=self.instrumentIds,
+        #                         startDateStr=self.start,
+        #                         endDateStr=self.end,
+        #                         event='history'
+        #                         )
+        # return AuquanDataSource(
+        #     'historicalData/', 
+        #     {'IT':['AAPL', 'GOOG']}, #instrumentIdsByType, 
+        #     '2017/01/01', #startDateStr, 
+        #     '2017/06/30', #endDateStr, 
+        #     liveUpdates=True
+        #     )
+       
 
     '''
     Return starting capital - the initial amount of money you're putting into your trading system
@@ -160,7 +180,7 @@ class MyTradingParams(TradingSystemParameters):
 
     def getPrediction(self, time, updateNum, instrumentManager):
 
-        predictions = pd.Series(index = self.instrumentIds)
+        predictions = pd.Series(index = self.instrumentIds, dtype='float64')
 
         # holder for all the instrument features
         lookbackInstrumentFeatures = instrumentManager.getLookbackInstrumentFeatures()
@@ -292,6 +312,7 @@ class MyCustomFeature(Feature):
         else:
             return currentValue * 0.5
 
+results = None
 
 if __name__ == "__main__":
     if updateCheck():
@@ -303,4 +324,9 @@ if __name__ == "__main__":
         # Set onlyAnalyze to True to quickly generate csv files with all the features
         # Set onlyAnalyze to False to run a full backtest
         # Set makeInstrumentCsvs to False to not make instrument specific csvs in runLogs. This improves the performance BY A LOT
-        tradingSystem.startTrading(onlyAnalyze=False, shouldPlot=True, makeInstrumentCsvs=True, createResultDict=False)
+        results = tradingSystem.startTrading(onlyAnalyze=False, 
+                                    shouldPlot=True, 
+                                    makeInstrumentCsvs=True, 
+                                    createResultDict=True)
+        print(results)
+        

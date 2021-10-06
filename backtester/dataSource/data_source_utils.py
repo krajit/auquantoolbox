@@ -5,9 +5,14 @@ import os
 import os.path
 import requests
 import re
+
 from time import mktime as mktime
 from itertools import groupby
 
+import yfinance as yf
+import pandas as pd
+
+from datetime import datetime
 
 def getCookieForYahoo(instrumentId):
     """Returns a tuple pair of cookie and crumb used in the request"""
@@ -23,6 +28,44 @@ def getCookieForYahoo(instrumentId):
             crumb = m.groupdict()['crumb']
             crumb = crumb.replace(u'\\u002F', '/')
     return cookie, crumb  # return a tuple of crumb and cookie
+
+
+# def downloadFileFromYahoo(startDate, endDate, instrumentId, fileName, event='history'):
+#     logInfo('Downloading %s' % fileName)
+#     data = yf.download(instrumentId, start='2015-01-02', end='2017-08-31')
+#     data.to_csv(fileName)
+#     return True
+
+def readLocalFileFromDrive(pathToHistoricalData, startDate, endDate, instrumentId, fileName, event='history'):
+    # open the instrument file from a central repo
+    df = pd.read_csv(pathToHistoricalData+instrumentId+".csv")
+    # read the file as a dataframe
+    df['Date']= pd.to_datetime(df['Date'])  # string to date
+    df = df.set_index('Date')
+    # select the relevant rows based on start days and end days
+    df = df[startDate.strftime('%Y-%m-%d'):endDate.strftime('%Y-%m-%d')]
+   
+    # TODO: This is a dummy ad hoc thing for now. 
+    # Replace this line with actual calculation of Adj Close calculation
+    df['Adj Close'] = df['Close']
+    
+    # save it into a csv file
+    df.to_csv(fileName)
+    return True
+
+
+def downloadFileFromYahoo(startDate, endDate, instrumentId, fileName, event='history'):
+    logInfo('Downloading %s' % fileName)
+    cookie, crumb = getCookieForYahoo(instrumentId)
+    start = int(mktime(startDate.timetuple()))
+    end = int(mktime(endDate.timetuple()))
+    url = 'https://query1.finance.yahoo.com/v7/finance/download/%s?period1=%s&period2=%s&interval=1d&events=%s&crumb=%s' % (instrumentId, start, end, event, crumb)
+    data = requests.get(url, cookies={'B': cookie})
+    with open(fileName, 'wb') as f:
+        f.write(data.content)
+        return True
+    return False
+
 
 
 def downloadFileFromYahoo(startDate, endDate, instrumentId, fileName, event='history'):
